@@ -3,15 +3,26 @@
 
 static const mp_rom_map_elem_t module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_espdl) },
+    { MP_ROM_QSTR(MP_QSTR_RGB888), MP_ROM_INT(0)},
+    { MP_ROM_QSTR(MP_QSTR_RGB565), MP_ROM_INT(6)},
+    { MP_ROM_QSTR(MP_QSTR_GRAYSCALE), MP_ROM_INT(3)},
+    #if MP_DL_FACE_DETECTOR_ENABLED
     { MP_ROM_QSTR(MP_QSTR_FaceDetector), MP_ROM_PTR(&mp_face_detector_type) },
+    #endif
     #if MP_DL_FACE_RECOGNITION_ENABLED
     { MP_ROM_QSTR(MP_QSTR_FaceRecognizer), MP_ROM_PTR(&mp_face_recognizer_type) },
     #endif
-    #if MP_DL_PEDESTRISN_DETECTOR_ENABLED
+    #if MP_DL_PEDESTRIAN_DETECTOR_ENABLED
     { MP_ROM_QSTR(MP_QSTR_HumanDetector), MP_ROM_PTR(&mp_human_detector_type) },
     #endif
     #if MP_DL_IMAGENET_CLS_ENABLED
     { MP_ROM_QSTR(MP_QSTR_ImageNet), MP_ROM_PTR(&mp_image_net_type) },
+    #endif
+    #if MP_DL_COCO_DETECTOR_ENABLED
+    { MP_ROM_QSTR(MP_QSTR_CocoDetector), MP_ROM_PTR(&mp_coco_detector_type) },
+    #endif
+    #if MP_DL_CAT_DETECTOR_ENABLED
+    { MP_ROM_QSTR(MP_QSTR_CatDetector), MP_ROM_PTR(&mp_cat_detector_type) },
     #endif
 };
 static MP_DEFINE_CONST_DICT(module_globals, module_globals_table);

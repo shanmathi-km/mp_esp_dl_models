@@ -1,6 +1,6 @@
 # ESP DL MicroPython Binding
 
-This is a MicroPython binding for ESP-DL (Deep Learning) models that enables face detection, face recognition, human detection, and image classification on ESP32 devices.
+This is a MicroPython binding for ESP-DL (Deep Learning) models that enables face detection, face recognition, human detection, cat detection, and image classification on ESP32 devices.
 
 ## Donate
 
@@ -12,9 +12,17 @@ I spent a lot of time and effort to make this. If you find this project useful, 
 - `FaceDetector`: Detects faces in images and provides bounding boxes and facial features
 - `FaceRecognizer`: Recognizes enrolled faces and manages a face database
 - `HumanDetector`: Detects people in images and provides bounding boxes
+- `CatDetector`: Detects cats in images and provides bounding boxes
 - `ImageNet`: Classifies images into predefined categories
+- `CocoDetector`: Detects objects in images using COCO dataset categories
 
 ## Installation & Building
+
+### Requirements
+
+- ESP-IDF:
+  - Version 5.4.2 with MicroPython >=1.26.0
+- Make sure you have the complete ESP32 build environment set up
 
 ### Precompiled Images
 
@@ -26,15 +34,32 @@ You can find precompiled images in two ways:
 
 1. Clone the required repositories:
 ```sh
-git clone https://github.com/cnadler86/mp_esp_dl_models.git
+git clone --recursive https://github.com/cnadler86/mp_esp_dl_models.git
 git clone https://github.com/cnadler86/micropython-camera-API.git
 git clone https://github.com/cnadler86/mp_jpeg.git
 ```
 
 2. Build the firmware:
-Make sure you have the complete ESP32 build environment for MicroPython available.
+There are two ways to enable the different models:
+
+a) Using mpconfigvariant files (recommended):
+The models can be enabled in the board's mpconfigvariant files (e.g., mpconfigvariant_FLASH_16M.cmake). The following flags are available:
+- MP_DL_FACE_DETECTOR_ENABLED
+- MP_DL_FACE_RECOGNITION_ENABLED
+- MP_DL_PEDESTRIAN_DETECTOR_ENABLED
+- MP_DL_IMAGENET_CLS_ENABLED
+- MP_DL_COCO_DETECTOR_ENABLED
+- MP_DL_CAT_DETECTOR_ENABLED
+
+b) Using command line flags:
+You can enable models directly through the idf.py command using -D flags:
 ```sh
-cd boards/
+idf.py -D MP_DL_FACE_RECOGNITION_ENABLED=1 -D MP_DL_CAT_DETECTOR_ENABLED=1 [other flags...]
+```
+
+Basic build command:
+```sh
+cd mp_esp_dl_models/boards/
 idf.py -D MICROPY_DIR=<micropython-dir> -D MICROPY_BOARD=<BOARD_NAME> -D MICROPY_BOARD_VARIANT=<BOARD_VARIANT> -B build-<your-build-name> build
 cd build-<your-build-name>
 python ~/micropython/ports/esp32/makeimg.py sdkconfig bootloader/bootloader.bin partition_table/partition-table.bin micropython.bin firmware.bin micropython.uf2
@@ -44,7 +69,14 @@ python ~/micropython/ports/esp32/makeimg.py sdkconfig bootloader/bootloader.bin 
 
 ### Common Requirements
 
-All models require input images in RGB888 format. You can use [mp_jpeg](https://github.com/cnadler86/mp_jpeg/) to decode camera images to the correct format.
+All models support various input pixel formats including RGB888 (default), RGB565, and others supported by ESP-DL. You can use [mp_jpeg](https://github.com/cnadler86/mp_jpeg/) to decode camera images to the correct format.
+
+The pixel format can be set through the constructor's `pixel_format` parameter. This value matches the ESP-DL image format definitions.
+
+### Pixel Formats
+- `espdl.RGB888` (default)
+- `espdl.RGB565`
+- `espdl.GRAYSCALE`
 
 ### FaceDetector
 
@@ -52,12 +84,13 @@ The FaceDetector module detects faces in images and can optionally provide facia
 
 #### Constructor
 ```python
-FaceDetector(width=320, height=240, features=True)
+FaceDetector(width=320, height=240, pixel_format=espdl.RGB888, features=True)
 ```
 
 **Parameters:**
 - `width` (int, optional): Input image width. Default: 320
 - `height` (int, optional): Input image height. Default: 240
+- `pixel_format` (int, optional): Input image pixel format. Default: espdl.RGB888
 - `features` (bool, optional): Whether to return facial feature points. Default: True
 
 #### Methods
@@ -67,7 +100,7 @@ FaceDetector(width=320, height=240, features=True)
   Detects faces in the provided image.
 
   **Parameters:**
-  - `framebuffer`: RGB888 image data (required)
+  - `framebuffer`: image data (required)
 
   **Returns:**
   List of dictionaries with detection results, each containing:
@@ -81,13 +114,16 @@ The FaceRecognizer module manages a database of faces and can recognize previous
 
 #### Constructor
 ```python
-FaceRecognizer(width=320, height=240, db_path="face.db")
+FaceRecognizer(width=320, height=240, pixel_format=espdl.RGB888, features=True, db_path="face.db", model=None)
 ```
 
 **Parameters:**
 - `width` (int, optional): Input image width. Default: 320
 - `height` (int, optional): Input image height. Default: 240
+- `pixel_format` (int, optional): Input image pixel format. Default: espdl.RGB888
+- `features` (bool, optional): Whether to return facial feature points. Default: True
 - `db_path` (str, optional): Path to the face database file. Default: "face.db"
+- `model` (str, optional): Feature extraction model to use ("MBF" or "MFN"). Default: None (uses default model)
 
 #### Methods
 
@@ -96,7 +132,7 @@ FaceRecognizer(width=320, height=240, db_path="face.db")
   Detects and recognizes faces in the provided image.
 
   **Parameters:**
-  - `framebuffer`: RGB888 image data (required)
+  - `framebuffer`: image data (required)
 
   **Returns:**
   List of dictionaries with recognition results, each containing:
@@ -113,7 +149,7 @@ FaceRecognizer(width=320, height=240, db_path="face.db")
   Enrolls a new face in the database.
 
   **Parameters:**
-  - `framebuffer`: RGB888 image data
+  - `framebuffer`: image data
   - `validate` (bool, optional): Check if face is already enrolled. Default: False
   - `name` (str, optional): Name to associate with the face. Default: None
 
@@ -131,18 +167,19 @@ FaceRecognizer(width=320, height=240, db_path="face.db")
   
   Prints the contents of the face database.
 
-### HumanDetector
+### HumanDetector and Cat Detector
 
-The HumanDetector module detects people in images.
+The HumanDetector module detects people in images. The CatDetector does it for cats. Both modules provide bounding boxes for detected objects.
 
 #### Constructor
 ```python
-HumanDetector(width=320, height=240)
+HumanDetector(width=320, height=240, pixel_format=espdl.RGB888) #For cats use CatDetector
 ```
 
 **Parameters:**
 - `width` (int, optional): Input image width. Default: 320
 - `height` (int, optional): Input image height. Default: 240
+- `pixel_format` (int, optional): Input image pixel format. Default: espdl.RGB888
 
 #### Methods
 
@@ -151,7 +188,7 @@ HumanDetector(width=320, height=240)
   Detects people in the provided image.
 
   **Parameters:**
-  - `framebuffer`: RGB888 image data
+  - `framebuffer`: image data
 
   **Returns:**
   List of dictionaries with detection results, each containing:
@@ -164,12 +201,13 @@ The ImageNet module classifies images into predefined categories.
 
 #### Constructor
 ```python
-ImageNet(width=320, height=240)
+ImageNet(width=320, height=240, pixel_format=espdl.RGB888)
 ```
 
 **Parameters:**
 - `width` (int, optional): Input image width. Default: 320
 - `height` (int, optional): Input image height. Default: 240
+- `pixel_format` (int, optional): Input image pixel format. Default: espdl.RGB888
 
 #### Methods
 
@@ -178,11 +216,40 @@ ImageNet(width=320, height=240)
   Classifies the provided image.
 
   **Parameters:**
-  - `framebuffer`: RGB888 image data
+  - `framebuffer`: image data
 
   **Returns:**
   List alternating between class names and confidence scores:
   `[class1, score1, class2, score2, ...]`
+
+### COCO detect
+
+The COCO detect module detects objects in images using the COCO dataset.
+
+#### Constructor
+```python
+COCODetector(width=320, height=240, pixel_format=espdl.RGB888, model=CONFIG_DEFAULT_COCO_DETECT_MODEL)
+```
+
+**Parameters:**
+- `width` (int, optional): Input image width. Default: 320
+- `height` (int, optional): Input image height. Default: 240
+- `pixel_format` (int, optional): Input image pixel format. Default: espdl.RGB888
+- `model` (int, optional): COCO detection model to use. Default: CONFIG_DEFAULT_COCO_DETECT_MODEL
+
+#### Methods
+- **run(framebuffer)**
+  
+  Detects objects in the provided image.
+
+  **Parameters:**
+  - `framebuffer`: image data
+
+  **Returns:**
+  List of dictionaries with detection results, each containing:
+  - `score`: Detection confidence
+  - `box`: Bounding box coordinates [x1, y1, x2, y2]
+  - `category`: Detected object class id
 
 ## Usage Examples
 
@@ -194,7 +261,7 @@ from jpeg import Decoder
 
 # Initialize components
 cam = camera.Camera()
-decoder = Decoder()
+decoder = Decoder(pixel_format="RGB888")
 face_detector = FaceDetector()
 
 # Capture and process image
@@ -218,7 +285,7 @@ from jpeg import Decoder
 
 # Initialize components
 cam = camera.Camera()
-decoder = Decoder()
+decoder = Decoder(pixel_format="RGB888")
 recognizer = FaceRecognizer(db_path="/faces.db")
 
 # Enroll a face
@@ -259,7 +326,7 @@ The following table shows the frames per second (fps) for different image sizes 
 
 ## Notes & Best Practices
 
-1. **Image Format**: Always ensure input images are in RGB888 format. Use mp_jpeg for JPEG decoding from camera.
+1. **Image Format**: Always ensure input images are in the right format. Use mp_jpeg for JPEG decoding from camera.
 
 2. **Memory Management**: 
    - Close/delete detector objects when no longer needed
