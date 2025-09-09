@@ -1,6 +1,7 @@
 include(${MICROPY_DIR}/py/py.cmake)
 
 add_library(usermod_mp_esp_dl INTERFACE)
+add_dependencies(usermod_mp_esp_dl esp-dl)
 
 target_include_directories(usermod_mp_esp_dl INTERFACE
     ${CMAKE_CURRENT_LIST_DIR}
@@ -8,6 +9,8 @@ target_include_directories(usermod_mp_esp_dl INTERFACE
 
 target_sources(usermod_mp_esp_dl INTERFACE
     ${CMAKE_CURRENT_LIST_DIR}/mp_esp_dl_module.c
+    ${CMAKE_CURRENT_LIST_DIR}/lib/mpfile.c
+    ${CMAKE_CURRENT_LIST_DIR}/lib/esp_dl_mpfile_wrapper.c
 )
 
 if (MP_DL_FACE_DETECTOR_ENABLED)
@@ -41,12 +44,12 @@ if (MP_DL_FACE_RECOGNITION_ENABLED)
     message(STATUS "Adding face_recognition model binding")
     target_compile_definitions(usermod_mp_esp_dl INTERFACE MP_DL_FACE_RECOGNITION_ENABLED=1)
     add_dependencies(usermod_mp_esp_dl human_face_recognition)
-    target_compile_options(usermod INTERFACE $<$<COMPILE_LANGUAGE:CXX>:-frtti>)
+    target_compile_options(usermod_mp_esp_dl INTERFACE $<$<COMPILE_LANGUAGE:CXX>:-frtti>)
     target_sources(usermod_mp_esp_dl INTERFACE 
         ${CMAKE_CURRENT_LIST_DIR}/esp_face_recognition.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/lib/mp_esp_dl_recognition_database.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/lib/mp_esp_dl_human_face_recognition.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/lib/mpfile.c
+        # ${CMAKE_CURRENT_LIST_DIR}/lib/mp_esp_dl_recognition_database.cpp
+        # ${CMAKE_CURRENT_LIST_DIR}/lib/mp_esp_dl_human_face_recognition.cpp
+        # ${CMAKE_CURRENT_LIST_DIR}/lib/mpfile.c
     )
 endif()
 

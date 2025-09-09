@@ -2,7 +2,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/idf_additions.h"
 #include "human_face_detect.hpp"
-#include "lib/mp_esp_dl_human_face_recognition.hpp"
+#include "human_face_recognition.hpp"
 
 #if MP_DL_FACE_RECOGNITION_ENABLED
 
@@ -61,7 +61,7 @@ static mp_obj_t face_recognizer_make_new(const mp_obj_type_t *type, size_t n_arg
         }
     }
 #endif
-    self->FaceRecognizer = std::make_shared<HumanFaceRecognizer>(self->FaceFeat.get(), self->db_path);
+    self->FaceRecognizer = std::make_shared<HumanFaceRecognizer>(self->db_path, HumanFaceFeat::MFN_S8_V1);
 
     if ((!self->FaceFeat) || (!self->FaceRecognizer)) {
         mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("Failed to create model instances"));
