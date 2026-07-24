@@ -46,8 +46,8 @@ jobs:
             ~/.espressif/
             ~/.cache/pip/
             ${{ env.MICROPYTHON_DIR }}
-          key: mpy-${{ env.MPY_RELEASE }}
-          restore-keys: mpy-
+          key: mpy-mp-dl-${{ env.MPY_RELEASE }}
+          restore-keys: mpy-mp-dl-
 
       - name: Install dependencies (if not cached)
         if: steps.cache_esp_idf.outputs.cache-hit != 'true'
@@ -102,8 +102,8 @@ jobs:
             ~/.espressif/
             ~/.cache/pip/
             ${{ env.MICROPYTHON_DIR }}
-          key: mpy-${{ env.MPY_RELEASE }}
-          restore-keys: mpy-
+          key: mpy-mp-dl-${{ env.MPY_RELEASE }}
+          restore-keys: mpy-mp-dl-
 
       - name: Checkout repository
         uses: actions/checkout@v4
